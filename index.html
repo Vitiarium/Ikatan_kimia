@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visualisasi Ikatan Kimia — Ion &amp; Kovalen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/128/three.min.js"></script>
+<style>
+  :root{
+    --paper:#EEF1ED;
+    --paper-line:#D8DED7;
+    --ink:#182422;
+    --ink-soft:#4B5A56;
+    --panel-dark:#10171A;
+    --panel-dark-edge:#26343A;
+    --accent-ion:#C0562B;
+    --accent-covalent:#2E7D6B;
+    --accent-highlight:#E8B84B;
+    --warn:#8A8F94;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--panel-dark);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+  header{
+    padding:18px 24px 14px;
+    background:var(--panel-dark);
+    border-bottom:1px solid var(--panel-dark-edge);
+    display:flex;
+    align-items:baseline;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  header h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:20px;
+    font-weight:700;
+    color:#F4F6F5;
+    margin:0;
+    letter-spacing:0.2px;
+  }
+  header p{
+    margin:0;
+    font-size:12.5px;
+    color:#9AA6A3;
+    font-family:'IBM Plex Mono',monospace;
+  }
+
+  .app{
+    flex:1;
+    display:grid;
+    grid-template-columns: 1.15fr 128px 1.15fr;
+    grid-template-rows: 1fr auto;
+    min-height:560px;
+  }
+
+  .pane-2d{
+    background:var(--paper);
+    position:relative;
+    border-right:1px solid var(--panel-dark-edge);
+    display:flex;
+    flex-direction:column;
+  }
+  .pane-2d .pane-label, .pane-3d .pane-label{
+    position:absolute;
+    top:10px;
+    left:12px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    letter-spacing:1.5px;
+    text-transform:uppercase;
+    z-index:2;
+  }
+  .pane-2d .pane-label{color:var(--ink-soft);}
+  .pane-3d .pane-label{color:#7C8B87;}
+
+  #svg2d{width:100%;height:100%;display:block;}
+
+  .palette{
+    background:#161F22;
+    border-right:1px solid var(--panel-dark-edge);
+    display:flex;
+    justify-content:space-around;
+    padding:34px 6px 10px;
+    overflow-y:auto;
+  }
+  .group-col{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+  }
+  .group-header{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    color:#6C7A76;
+    margin-bottom:4px;
+  }
+  .el-btn{
+    width:34px;height:30px;
+    border-radius:6px;
+    border:1px solid #2C3A3E;
+    background:#1B2528;
+    font-family:'IBM Plex Mono',monospace;
+    font-weight:600;
+    font-size:12px;
+    cursor:pointer;
+    transition:transform .1s ease, border-color .15s ease;
+  }
+  .el-btn:hover{border-color:var(--accent-highlight); transform:translateY(-1px);}
+  .el-btn:active{transform:translateY(0);}
+
+  .pane-3d{
+    background:radial-gradient(circle at 50% 40%, #131C1F 0%, #0A0F11 100%);
+    position:relative;
+  }
+  #three-container{width:100%;height:100%;}
+  .hint3d{
+    position:absolute;
+    bottom:10px;
+    right:12px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;
+    color:#5C6A66;
+  }
+
+  .info-bar{
+    grid-column:1 / -1;
+    background:#0F1517;
+    border-top:1px solid var(--panel-dark-edge);
+    display:grid;
+    grid-template-columns: auto 1fr auto;
+    gap:26px;
+    padding:14px 24px;
+    align-items:start;
+    color:#D6DDDA;
+  }
+  .info-block h2{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:1.2px;
+    color:#7C8B87;
+    margin:0 0 8px;
+    font-weight:700;
+  }
+  #formula-display{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:26px;
+    color:#F4F6F5;
+    letter-spacing:0.5px;
+    min-width:120px;
+  }
+  #formula-display sub{font-size:16px;}
+  .counts{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:#7C8B87;
+    margin-top:6px;
+  }
+
+  #bond-list{
+    list-style:none;
+    margin:0;padding:0;
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    max-height:92px;
+    overflow-y:auto;
+  }
+  .bond-row{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;
+    background:#161F22;
+    border-radius:6px;
+    padding:6px 10px;
+    display:flex;
+    gap:8px;
+    align-items:center;
+    border-left:3px solid var(--warn);
+    white-space:nowrap;
+  }
+  .bond-row.bond-ionic{border-left-color:var(--accent-ion);}
+  .bond-row.bond-covalent{border-left-color:var(--accent-covalent);}
+  .bond-pair{font-weight:600;color:#F4F6F5;}
+  .bond-type{color:#9AA6A3;font-size:10.5px;}
+  #bond-list .empty{background:none;border-left:none;color:#5C6A66;font-style:italic;}
+
+  .legend{display:flex; flex-direction:column; gap:6px; align-items:flex-end;}
+  .legend-row{display:flex; align-items:center; gap:8px; font-size:11px; color:#9AA6A3; font-family:'IBM Plex Mono',monospace;}
+  .swatch{width:22px;height:0;border-top-width:3px; border-top-style:solid;}
+  .swatch.ion{border-color:var(--accent-ion); border-top-style:dashed;}
+  .swatch.cov{border-color:var(--accent-covalent);}
+  .swatch.other{border-color:var(--warn); border-top-style:dotted;}
+
+  .actions{display:flex; gap:8px; margin-top:8px;}
+  button.reset{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    background:transparent;
+    border:1px solid #3A4A46;
+    color:#9AA6A3;
+    padding:6px 12px;
+    border-radius:6px;
+    cursor:pointer;
+  }
+  button.reset:hover{border-color:var(--accent-ion); color:#F4F6F5;}
+
+  .note{
+    grid-column:1/-1;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    color:#4B5754;
+    padding:0 24px 12px;
+    background:#0F1517;
+  }
+
+  :focus-visible{outline:2px solid var(--accent-highlight); outline-offset:2px;}
+
+  @media (max-width: 880px){
+    .app{grid-template-columns:1fr; grid-template-rows:auto auto auto auto;}
+    .palette{
+      order:1;
+      flex-direction:row;
+      justify-content:flex-start;
+      overflow-x:auto;
+      padding:14px 10px;
+      border-right:none;
+      border-bottom:1px solid var(--panel-dark-edge);
+    }
+    .pane-2d{order:2; height:340px; border-right:none; border-bottom:1px solid var(--panel-dark-edge);}
+    .pane-3d{order:3; height:340px;}
+    .info-bar{order:4; grid-template-columns:1fr; gap:14px;}
+    .legend{align-items:flex-start;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Visualisasi Ikatan Kimia</h1>
+  <p>Klik unsur → tambah atom &nbsp;·&nbsp; klik dua atom → sambung/putus ikatan &nbsp;·&nbsp; klik ikatan → hapus</p>
+</header>
+
+<div class="app">
+  <div class="pane-2d">
+    <span class="pane-label">Struktur 2D</span>
+    <svg id="svg2d" viewBox="0 0 500 400" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+
+  <div class="palette" id="palette"></div>
+
+  <div class="pane-3d">
+    <span class="pane-label">Model 3D</span>
+    <div id="three-container"></div>
+    <span class="hint3d">seret = putar &nbsp;·&nbsp; scroll = zoom</span>
+  </div>
+
+  <div class="info-bar">
+    <div class="info-block">
+      <h2>Rumus</h2>
+      <div id="formula-display">—</div>
+      <div class="counts"><span id="atom-total">0</span> atom · <span id="bond-total">0</span> ikatan</div>
+      <div class="actions"><button class="reset" id="reset-btn">Reset semua</button></div>
+    </div>
+
+    <div class="info-block">
+      <h2>Ikatan terbentuk</h2>
+      <ul id="bond-list"></ul>
+    </div>
+
+    <div class="legend">
+      <div class="legend-row"><span class="swatch ion"></span> Ikatan ion (ΔEN ≥ 1,7)</div>
+      <div class="legend-row"><span class="swatch cov"></span> Ikatan kovalen (ΔEN &lt; 1,7)</div>
+      <div class="legend-row"><span class="swatch other"></span> Logam–logam / gas mulia</div>
+    </div>
+  </div>
+
+  <div class="note">
+    Catatan: jenis ikatan dihitung otomatis dari selisih keelektronegatifan Pauling (ΔEN). Rumus ditampilkan sebagai jumlah atom sederhana (belum mengelompokkan gugus seperti (OH)ₙ), dan tata letak 3D memakai simulasi gaya sederhana, bukan geometri VSEPR akurat.
+  </div>
+</div>
+
+<script>
+const svgNS = 'http://www.w3.org/2000/svg';
+const COLOR_ION = '#C0562B';
+const COLOR_COVALENT = '#2E7D6B';
+const COLOR_OTHER = '#9CA3AF';
+const COLOR_HIGHLIGHT = '#E8B84B';
+
+const ELEMENTS = {
+  H:  {name:'Hidrogen',   group:'1A', category:'nonmetal',    en:2.20, color:'#6B7280', r:0.35},
+  Li: {name:'Litium',     group:'1A', category:'alkali',      en:0.98, color:'#8B5CF6', r:0.90},
+  Na: {name:'Natrium',    group:'1A', category:'alkali',      en:0.93, color:'#7C3AED', r:1.05},
+  K:  {name:'Kalium',     group:'1A', category:'alkali',      en:0.82, color:'#6D28D9', r:1.20},
+
+  Be: {name:'Berilium',   group:'2A', category:'alkaline',    en:1.57, color:'#65A30D', r:0.60},
+  Mg: {name:'Magnesium',  group:'2A', category:'alkaline',    en:1.31, color:'#4D7C0F', r:0.95},
+  Ca: {name:'Kalsium',    group:'2A', category:'alkaline',    en:1.00, color:'#3F6212', r:1.15},
+  Ba: {name:'Barium',     group:'2A', category:'alkaline',    en:0.89, color:'#365314', r:1.25},
+
+  B:  {name:'Boron',      group:'3A', category:'metalloid',   en:2.04, color:'#DB7093', r:0.55},
+  Al: {name:'Aluminium',  group:'3A', category:'other-metal', en:1.61, color:'#64748B', r:0.85},
+
+  C:  {name:'Karbon',     group:'4A', category:'nonmetal',    en:2.55, color:'#374151', r:0.50},
+  Si: {name:'Silikon',    group:'4A', category:'metalloid',   en:1.90, color:'#B08968', r:0.75},
+
+  N:  {name:'Nitrogen',   group:'5A', category:'nonmetal',    en:3.04, color:'#2563EB', r:0.50},
+  P:  {name:'Fosforus',   group:'5A', category:'nonmetal',    en:2.19, color:'#EA580C', r:0.70},
+
+  O:  {name:'Oksigen',    group:'6A', category:'nonmetal',    en:3.44, color:'#DC2626', r:0.48},
+  S:  {name:'Belerang',   group:'6A', category:'nonmetal',    en:2.58, color:'#CA8A04', r:0.68},
+
+  F:  {name:'Fluorin',    group:'7A', category:'halogen',     en:3.98, color:'#22C55E', r:0.45},
+  Cl: {name:'Klorin',     group:'7A', category:'halogen',     en:3.16, color:'#15803D', r:0.65},
+  Br: {name:'Bromin',     group:'7A', category:'halogen',     en:2.96, color:'#92400E', r:0.78},
+  I:  {name:'Iodin',      group:'7A', category:'halogen',     en:2.66, color:'#7E22CE', r:0.88},
+
+  He: {name:'Helium',     group:'8A', category:'noble',       en:null, color:'#0891B2', r:0.35},
+  Ne: {name:'Neon',       group:'8A', category:'noble',       en:null, color:'#0E7490', r:0.50},
+  Ar: {name:'Argon',      group:'8A', category:'noble',       en:null, color:'#155E75', r:0.68},
+};
+const GROUPS = ['1A','2A','3A','4A','5A','6A','7A','8A'];
+const METAL_CATS = ['alkali','alkaline','other-metal'];
+
+let atoms = [];   // {id, sym, x,y,z, vx,vy,vz}
+let bonds = [];   // {a,b,type,delta,label}
+let nextId = 1;
+let selectedId = null;
+
+// ---------- chemistry logic ----------
+function classifyBond(sym1, sym2){
+  const e1 = ELEMENTS[sym1], e2 = ELEMENTS[sym2];
+  if(e1.category === 'noble' || e2.category === 'noble'){
+    return {type:'noble', delta:null, label:'gas mulia — umumnya tidak berikatan'};
+  }
+  if(METAL_CATS.includes(e1.category) && METAL_CATS.includes(e2.category)){
+    const delta = Math.abs(e1.en - e2.en);
+    return {type:'metallic', delta, label:'logam–logam — cenderung ikatan logam'};
+  }
+  const delta = Math.abs(e1.en - e2.en);
+  if(delta >= 1.7){
+    return {type:'ionic', delta, label:'ion · ΔEN ' + delta.toFixed(2)};
+  }
+  const sub = delta >= 0.4 ? 'polar' : 'nonpolar';
+  return {type:'covalent', delta, label:'kovalen ' + sub + ' · ΔEN ' + delta.toFixed(2)};
+}
+
+// ---------- state mutation ----------
+function addAtom(sym){
+  let cx=0, cy=0, cz=0;
+  if(atoms.length){
+    cx = atoms.reduce((s,a)=>s+a.x,0)/atoms.length;
+    cy = atoms.reduce((s,a)=>s+a.y,0)/atoms.length;
+    cz = atoms.reduce((s,a)=>s+a.z,0)/atoms.length;
+  }
+  const jitter = ()=> (Math.random()-0.5)*2.2;
+  atoms.push({id:nextId++, sym, x:cx+jitter(), y:cy+jitter(), z:cz+jitter(), vx:0, vy:0, vz:0});
+  relax();
+  renderAll();
+}
+
+function removeAtom(id){
+  atoms = atoms.filter(a=>a.id!==id);
+  bonds = bonds.filter(b=>b.a!==id && b.b!==id);
+  if(selectedId===id) selectedId=null;
+  relax();
+  renderAll();
+}
+
+function toggleBond(id1, id2){
+  if(id1===id2) return;
+  const idx = bonds.findIndex(b=> (b.a===id1&&b.b===id2) || (b.a===id2&&b.b===id1));
+  if(idx>=0){
+    bonds.splice(idx,1);
+  } else {
+    const a1 = atoms.find(a=>a.id===id1), a2 = atoms.find(a=>a.id===id2);
+    if(!a1||!a2) return;
+    const cls = classifyBond(a1.sym, a2.sym);
+    bonds.push({a:id1, b:id2, type:cls.type, delta:cls.delta, label:cls.label});
+  }
+  relax();
+  renderAll();
+}
+
+function onAtomClick(id){
+  if(selectedId===null){
+    selectedId = id;
+    renderAll();
+  } else if(selectedId===id){
+    selectedId = null;
+    renderAll();
+  } else {
+    const prev = selectedId;
+    selectedId = null;
+    toggleBond(prev, id);
+  }
+}
+
+// ---------- simple 3D force layout ----------
+function relax(){
+  const iterations = 140;
+  for(let it=0; it<iterations; it++){
+    for(let i=0;i<atoms.length;i++){
+      for(let j=i+1;j<atoms.length;j++){
+        const A=atoms[i], B=atoms[j];
+        let dx=A.x-B.x, dy=A.y-B.y, dz=A.z-B.z;
+        let distSq = dx*dx+dy*dy+dz*dz;
+        if(distSq < 1e-4){ dx=(Math.random()-0.5)*0.1; dy=(Math.random()-0.5)*0.1; dz=(Math.random()-0.5)*0.1; distSq=0.01; }
+        const dist = Math.sqrt(distSq);
+        const force = 2.1/distSq;
+        const fx=dx/dist*force, fy=dy/dist*force, fz=dz/dist*force;
+        A.vx+=fx; A.vy+=fy; A.vz+=fz;
+        B.vx-=fx; B.vy-=fy; B.vz-=fz;
+      }
+    }
+    bonds.forEach(b=>{
+      const A = atoms.find(a=>a.id===b.a), B = atoms.find(a=>a.id===b.b);
+      if(!A||!B) return;
+      const target = (ELEMENTS[A.sym].r + ELEMENTS[B.sym].r)*1.15 + 0.6;
+      let dx=B.x-A.x, dy=B.y-A.y, dz=B.z-A.z;
+      const dist = Math.sqrt(dx*dx+dy*dy+dz*dz) || 0.001;
+      const diff = dist-target;
+      const k = 0.10;
+      const fx=(dx/dist)*diff*k, fy=(dy/dist)*diff*k, fz=(dz/dist)*diff*k;
+      A.vx+=fx; A.vy+=fy; A.vz+=fz;
+      B.vx-=fx; B.vy-=fy; B.vz-=fz;
+    });
+    atoms.forEach(a=>{
+      a.x+=a.vx; a.y+=a.vy; a.z+=a.vz;
+      a.vx*=0.75; a.vy*=0.75; a.vz*=0.75;
+    });
+  }
+  if(atoms.length){
+    const cx=atoms.reduce((s,a)=>s+a.x,0)/atoms.length;
+    const cy=atoms.reduce((s,a)=>s+a.y,0)/atoms.length;
+    const cz=atoms.reduce((s,a)=>s+a.z,0)/atoms.length;
+    atoms.forEach(a=>{a.x-=cx; a.y-=cy; a.z-=cz;});
+  }
+}
+
+// ---------- 2D render ----------
+function render2D(){
+  const svg = document.getElementById('svg2d');
+  while(svg.firstChild) svg.removeChild(svg.firstChild);
+  const W=500, H=400, pad=60;
+
+  if(atoms.length===0){
+    const t = document.createElementNS(svgNS,'text');
+    t.setAttribute('x', W/2); t.setAttribute('y', H/2);
+    t.setAttribute('text-anchor','middle');
+    t.setAttribute('fill', '#9CA3AF');
+    t.setAttribute('font-family',"Inter, sans-serif");
+    t.setAttribute('font-size','13.5');
+    t.textContent = 'Klik unsur di sebelah kanan untuk mulai membangun struktur';
+    svg.appendChild(t);
+    return;
+  }
+
+  const xs = atoms.map(a=>a.x), ys = atoms.map(a=>a.y);
+  const minX=Math.min(...xs), maxX=Math.max(...xs);
+  const minY=Math.min(...ys), maxY=Math.max(...ys);
+  const rangeX = Math.max(maxX-minX, 1);
+  const rangeY = Math.max(maxY-minY, 1);
+  const scale = Math.min((W-2*pad)/rangeX, (H-2*pad)/rangeY, 62);
+  const cx0=(minX+maxX)/2, cy0=(minY+maxY)/2;
+  const toSvg = (x,y)=>[ W/2 + (x-cx0)*scale, H/2 - (y-cy0)*scale ];
+
+  bonds.forEach(b=>{
+    const A=atoms.find(a=>a.id===b.a), B=atoms.find(a=>a.id===b.b);
+    if(!A||!B) return;
+    const [x1,y1]=toSvg(A.x,A.y), [x2,y2]=toSvg(B.x,B.y);
+    const strokeColor = b.type==='ionic' ? COLOR_ION : b.type==='covalent' ? COLOR_COVALENT : COLOR_OTHER;
+    const dash = b.type==='ionic' ? '7,5' : (b.type==='metallic'||b.type==='noble') ? '2,4' : null;
+
+    const hit = document.createElementNS(svgNS,'line');
+    hit.setAttribute('x1',x1); hit.setAttribute('y1',y1);
+    hit.setAttribute('x2',x2); hit.setAttribute('y2',y2);
+    hit.setAttribute('stroke','transparent'); hit.setAttribute('stroke-width','14');
+    hit.style.cursor='pointer';
+    hit.addEventListener('click', (e)=>{ e.stopPropagation(); toggleBond(b.a,b.b); });
+    svg.appendChild(hit);
+
+    const line = document.createElementNS(svgNS,'line');
+    line.setAttribute('x1',x1); line.setAttribute('y1',y1);
+    line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+    line.setAttribute('stroke', strokeColor);
+    line.setAttribute('stroke-width','2.5');
+    if(dash) line.setAttribute('stroke-dasharray', dash);
+    line.setAttribute('pointer-events','none');
+    svg.appendChild(line);
+  });
+
+  atoms.forEach(a=>{
+    const el = ELEMENTS[a.sym];
+    const [x,y] = toSvg(a.x,a.y);
+    const g = document.createElementNS(svgNS,'g');
+    g.setAttribute('transform', 'translate('+x+','+y+')');
+    g.style.cursor='pointer';
+
+    if(a.id===selectedId){
+      const ring = document.createElementNS(svgNS,'circle');
+      ring.setAttribute('r','22');
+      ring.setAttribute('fill','none');
+      ring.setAttribute('stroke', COLOR_HIGHLIGHT);
+      ring.setAttribute('stroke-width','2.5');
+      ring.setAttribute('stroke-dasharray','4,3');
+      g.appendChild(ring);
+    }
+
+    const hitCircle = document.createElementNS(svgNS,'circle');
+    hitCircle.setAttribute('r','18');
+    hitCircle.setAttribute('fill','transparent');
+    g.appendChild(hitCircle);
+
+    const text = document.createElementNS(svgNS,'text');
+    text.setAttribute('text-anchor','middle');
+    text.setAttribute('dominant-baseline','central');
+    text.setAttribute('fill', el.color);
+    text.setAttribute('font-family',"'IBM Plex Mono', monospace");
+    text.setAttribute('font-weight','700');
+    text.setAttribute('font-size','15');
+    text.setAttribute('paint-order','stroke');
+    text.setAttribute('stroke','#EEF1ED');
+    text.setAttribute('stroke-width','5');
+    text.setAttribute('stroke-linejoin','round');
+    text.textContent = a.sym;
+    g.appendChild(text);
+
+    g.addEventListener('click', (e)=>{ e.stopPropagation(); onAtomClick(a.id); });
+    svg.appendChild(g);
+
+    if(a.id===selectedId){
+      const del = document.createElementNS(svgNS,'text');
+      del.setAttribute('x','15'); del.setAttribute('y','-15');
+      del.setAttribute('font-size','12'); del.setAttribute('fill','#B91C1C');
+      del.setAttribute('font-family',"'IBM Plex Mono', monospace");
+      del.style.cursor='pointer';
+      del.textContent = '✕';
+      del.addEventListener('click', (e)=>{ e.stopPropagation(); removeAtom(a.id); });
+      g.appendChild(del);
+    }
+  });
+}
+
+// ---------- 3D render ----------
+let scene, camera, renderer, moleculeGroup;
+let camTheta=0.6, camPhi=1.1, camRadius=9;
+
+function initThree(){
+  const container = document.getElementById('three-container');
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(45, container.clientWidth/Math.max(container.clientHeight,1), 0.1, 100);
+  renderer = new THREE.WebGLRenderer({antialias:true, alpha:true});
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  container.appendChild(renderer.domElement);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+  const dir1 = new THREE.DirectionalLight(0xffffff, 0.9);
+  dir1.position.set(5,8,6);
+  scene.add(dir1);
+  const dir2 = new THREE.DirectionalLight(0x88aacc, 0.3);
+  dir2.position.set(-5,-3,-4);
+  scene.add(dir2);
+
+  moleculeGroup = new THREE.Group();
+  scene.add(moleculeGroup);
+  updateCamera();
+
+  let dragging=false, lastX=0, lastY=0;
+  renderer.domElement.addEventListener('pointerdown', e=>{ dragging=true; lastX=e.clientX; lastY=e.clientY; });
+  window.addEventListener('pointerup', ()=> dragging=false);
+  window.addEventListener('pointermove', e=>{
+    if(!dragging) return;
+    const dx=e.clientX-lastX, dy=e.clientY-lastY;
+    lastX=e.clientX; lastY=e.clientY;
+    camTheta -= dx*0.008;
+    camPhi = Math.min(Math.max(camPhi - dy*0.008, 0.15), Math.PI-0.15);
+    updateCamera();
+  });
+  renderer.domElement.addEventListener('wheel', e=>{
+    e.preventDefault();
+    camRadius = Math.min(Math.max(camRadius + e.deltaY*0.01, 3), 25);
+    updateCamera();
+  }, {passive:false});
+
+  window.addEventListener('resize', onResize);
+  animate();
+}
+
+function updateCamera(){
+  camera.position.set(
+    camRadius*Math.sin(camPhi)*Math.sin(camTheta),
+    camRadius*Math.cos(camPhi),
+    camRadius*Math.sin(camPhi)*Math.cos(camTheta)
+  );
+  camera.lookAt(0,0,0);
+}
+
+function onResize(){
+  const container = document.getElementById('three-container');
+  if(container.clientWidth===0 || container.clientHeight===0) return;
+  camera.aspect = container.clientWidth/container.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(container.clientWidth, container.clientHeight);
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+}
+
+function addCylinderSegment(p1, p2, t0, t1, colorHex){
+  const start = new THREE.Vector3().lerpVectors(p1,p2,t0);
+  const end = new THREE.Vector3().lerpVectors(p1,p2,t1);
+  const dir = new THREE.Vector3().subVectors(end,start);
+  const len = dir.length();
+  if(len < 1e-4) return;
+  const geo = new THREE.CylinderGeometry(0.07,0.07,len,10);
+  const mat = new THREE.MeshStandardMaterial({color:colorHex, roughness:0.5});
+  const mesh = new THREE.Mesh(geo, mat);
+  const mid = new THREE.Vector3().addVectors(start,end).multiplyScalar(0.5);
+  mesh.position.copy(mid);
+  mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.clone().normalize());
+  moleculeGroup.add(mesh);
+}
+
+function render3D(){
+  if(!moleculeGroup) return;
+  while(moleculeGroup.children.length) moleculeGroup.remove(moleculeGroup.children[0]);
+  const SCALE = 0.9;
+
+  atoms.forEach(a=>{
+    const el = ELEMENTS[a.sym];
+    const geo = new THREE.SphereGeometry(el.r*0.42, 24, 24);
+    const mat = new THREE.MeshStandardMaterial({
+      color: el.color, roughness:0.45, metalness:0.1,
+      emissive: new THREE.Color(el.color), emissiveIntensity:0.12
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(a.x*SCALE, a.y*SCALE, a.z*SCALE);
+    moleculeGroup.add(mesh);
+
+    if(a.id===selectedId){
+      const haloGeo = new THREE.SphereGeometry(el.r*0.42*1.35, 16,16);
+      const haloMat = new THREE.MeshBasicMaterial({color:0xE8B84B, wireframe:true, transparent:true, opacity:0.6});
+      const halo = new THREE.Mesh(haloGeo, haloMat);
+      halo.position.copy(mesh.position);
+      moleculeGroup.add(halo);
+    }
+  });
+
+  bonds.forEach(b=>{
+    const A=atoms.find(a=>a.id===b.a), B=atoms.find(a=>a.id===b.b);
+    if(!A||!B) return;
+    const p1 = new THREE.Vector3(A.x*SCALE, A.y*SCALE, A.z*SCALE);
+    const p2 = new THREE.Vector3(B.x*SCALE, B.y*SCALE, B.z*SCALE);
+    const colorHex = b.type==='ionic' ? 0xC0562B : b.type==='covalent' ? 0x2E7D6B : 0x9CA3AF;
+
+    if(b.type==='ionic' || b.type==='metallic' || b.type==='noble'){
+      const segments=5;
+      for(let s=0; s<segments; s+=2){
+        addCylinderSegment(p1,p2, s/segments, (s+1)/segments, colorHex);
+      }
+    } else {
+      addCylinderSegment(p1,p2, 0, 1, colorHex);
+    }
+  });
+}
+
+// ---------- info panel ----------
+function updateInfo(){
+  const formulaEl = document.getElementById('formula-display');
+  const bondListEl = document.getElementById('bond-list');
+
+  if(atoms.length===0){
+    formulaEl.textContent = '—';
+  } else {
+    const counts = {};
+    atoms.forEach(a=> counts[a.sym] = (counts[a.sym]||0)+1);
+    const order = Object.keys(counts).sort((x,y)=> GROUPS.indexOf(ELEMENTS[x].group) - GROUPS.indexOf(ELEMENTS[y].group));
+    formulaEl.innerHTML = order.map(sym=>{
+      const n = counts[sym];
+      return n>1 ? (sym+'<sub>'+n+'</sub>') : sym;
+    }).join('');
+  }
+
+  bondListEl.innerHTML = '';
+  if(bonds.length===0){
+    const li = document.createElement('li');
+    li.className='empty';
+    li.textContent = 'Belum ada ikatan.';
+    bondListEl.appendChild(li);
+  } else {
+    bonds.forEach(b=>{
+      const A=atoms.find(a=>a.id===b.a), B=atoms.find(a=>a.id===b.b);
+      if(!A||!B) return;
+      const li = document.createElement('li');
+      li.className = 'bond-row bond-'+b.type;
+      const pair = document.createElement('span');
+      pair.className='bond-pair';
+      pair.textContent = A.sym+'–'+B.sym;
+      const type = document.createElement('span');
+      type.className='bond-type';
+      type.textContent = b.label;
+      li.appendChild(pair); li.appendChild(type);
+      bondListEl.appendChild(li);
+    });
+  }
+
+  document.getElementById('atom-total').textContent = atoms.length;
+  document.getElementById('bond-total').textContent = bonds.length;
+}
+
+function renderAll(){
+  render2D();
+  render3D();
+  updateInfo();
+}
+
+// ---------- palette ----------
+function buildPalette(){
+  const container = document.getElementById('palette');
+  container.innerHTML = '';
+  GROUPS.forEach(g=>{
+    const col = document.createElement('div');
+    col.className = 'group-col';
+    const header = document.createElement('div');
+    header.className = 'group-header';
+    header.textContent = g;
+    col.appendChild(header);
+    Object.keys(ELEMENTS).filter(sym=>ELEMENTS[sym].group===g).forEach(sym=>{
+      const el = ELEMENTS[sym];
+      const btn = document.createElement('button');
+      btn.className = 'el-btn';
+      btn.style.color = el.color;
+      btn.textContent = sym;
+      btn.title = el.name + (el.en!=null ? (' · EN ' + el.en) : ' · gas mulia');
+      btn.addEventListener('click', ()=> addAtom(sym));
+      col.appendChild(btn);
+    });
+    container.appendChild(col);
+  });
+}
+
+// ---------- wiring ----------
+document.getElementById('reset-btn').addEventListener('click', ()=>{
+  atoms=[]; bonds=[]; selectedId=null; nextId=1;
+  renderAll();
+});
+document.getElementById('svg2d').addEventListener('click', ()=>{
+  if(selectedId!==null){ selectedId=null; renderAll(); }
+});
+
+buildPalette();
+initThree();
+renderAll();
+</script>
+</body>
+</html>

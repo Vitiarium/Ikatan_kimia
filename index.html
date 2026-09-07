@@ -12,7 +12,7 @@
     --paper:#EEF1ED;
     --paper-line:#D8DED7;
     --ink:#182422;
-    --ink-soft:#4B5A56;
+    --ink-soft:#627771;
     --panel-dark:#10171A;
     --panel-dark-edge:#26343A;
     --accent-ion:#C0562B;
@@ -299,20 +299,21 @@ const COLOR_HIGHLIGHT = '#E8B84B';
 
 const ELEMENTS = {
   H:  {name:'Hidrogen',   group:'1A', category:'nonmetal',    en:2.20, color:'#6B7280', r:0.35},
-  Li: {name:'Litium',     group:'1A', category:'alkali',      en:0.98, color:'#8B5CF6', r:0.90},
-  Na: {name:'Natrium',    group:'1A', category:'alkali',      en:0.93, color:'#7C3AED', r:1.05},
-  K:  {name:'Kalium',     group:'1A', category:'alkali',      en:0.82, color:'#6D28D9', r:1.20},
+  Li: {name:'Litium',     group:'1A', category:'alkali',      en:0.98, color:'#ba2323', r:0.90},
+  Na: {name:'Natrium',    group:'1A', category:'alkali',      en:0.93, color:'#ba2323', r:1.05},
+  K:  {name:'Kalium',     group:'1A', category:'alkali',      en:0.82, color:'#ba2323', r:1.20},
+  Rb: {name:'Rubidium',   group:'1A', category: 'alkali',     en:0.82, color:'#ba2323' }
 
-  Be: {name:'Berilium',   group:'2A', category:'alkaline',    en:1.57, color:'#65A30D', r:0.60},
-  Mg: {name:'Magnesium',  group:'2A', category:'alkaline',    en:1.31, color:'#4D7C0F', r:0.95},
-  Ca: {name:'Kalsium',    group:'2A', category:'alkaline',    en:1.00, color:'#3F6212', r:1.15},
-  Ba: {name:'Barium',     group:'2A', category:'alkaline',    en:0.89, color:'#365314', r:1.25},
+  Be: {name:'Berilium',   group:'2A', category:'alkaline',    en:1.57, color:'#ba2323', r:0.60},
+  Mg: {name:'Magnesium',  group:'2A', category:'alkaline',    en:1.31, color:'#ba2323', r:0.95},
+  Ca: {name:'Kalsium',    group:'2A', category:'alkaline',    en:1.00, color:'#ba2323', r:1.15},
+  Ba: {name:'Barium',     group:'2A', category:'alkaline',    en:0.89, color:'#ba2323', r:1.25},
 
   B:  {name:'Boron',      group:'3A', category:'metalloid',   en:2.04, color:'#DB7093', r:0.55},
-  Al: {name:'Aluminium',  group:'3A', category:'other-metal', en:1.61, color:'#64748B', r:0.85},
+  Al: {name:'Aluminium',  group:'3A', category:'other-metal', en:1.61, color:'#ba2323', r:0.85},
 
   C:  {name:'Karbon',     group:'4A', category:'nonmetal',    en:2.55, color:'#374151', r:0.50},
-  Si: {name:'Silikon',    group:'4A', category:'metalloid',   en:1.90, color:'#B08968', r:0.75},
+  Si: {name:'Silikon',    group:'4A', category:'metalloid',   en:1.90, color:'#ba2323', r:0.75},
 
   N:  {name:'Nitrogen',   group:'5A', category:'nonmetal',    en:3.04, color:'#2563EB', r:0.50},
   P:  {name:'Fosforus',   group:'5A', category:'nonmetal',    en:2.19, color:'#EA580C', r:0.70},
@@ -325,9 +326,9 @@ const ELEMENTS = {
   Br: {name:'Bromin',     group:'7A', category:'halogen',     en:2.96, color:'#92400E', r:0.78},
   I:  {name:'Iodin',      group:'7A', category:'halogen',     en:2.66, color:'#7E22CE', r:0.88},
 
-  He: {name:'Helium',     group:'8A', category:'noble',       en:null, color:'#0891B2', r:0.35},
-  Ne: {name:'Neon',       group:'8A', category:'noble',       en:null, color:'#0E7490', r:0.50},
-  Ar: {name:'Argon',      group:'8A', category:'noble',       en:null, color:'#155E75', r:0.68},
+  He: {name:'Helium',     group:'8A', category:'noble',       en:null, color:'#4078bd', r:0.35},
+  Ne: {name:'Neon',       group:'8A', category:'noble',       en:null, color:'#4078bd', r:0.50},
+  Ar: {name:'Argon',      group:'8A', category:'noble',       en:null, color:'#4078bd', r:0.68},
 };
 const GROUPS = ['1A','2A','3A','4A','5A','6A','7A','8A'];
 const METAL_CATS = ['alkali','alkaline','other-metal'];
@@ -337,7 +338,6 @@ let bonds = [];   // {a,b,type,delta,label}
 let nextId = 1;
 let selectedId = null;
 
-// ---------- chemistry logic ----------
 function classifyBond(sym1, sym2){
   const e1 = ELEMENTS[sym1], e2 = ELEMENTS[sym2];
   if(e1.category === 'noble' || e2.category === 'noble'){
